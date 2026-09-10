@@ -1,0 +1,179 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #05060a;
+  color: #dfe6f3;
+  font-family: -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  line-height: 1.7;
+}
+
+a {
+  color: #4ad9ff;
+}
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ---- Hero ---- */
+.hero {
+  padding: 56px 0 40px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(74, 217, 255, 0.14), transparent 60%),
+    #05060a;
+}
+
+.hero img.logo {
+  width: min(90%, 420px);
+  height: auto;
+  filter: drop-shadow(0 0 24px rgba(74, 217, 255, 0.35));
+}
+
+.hero .tagline {
+  margin: 18px auto 0;
+  max-width: 520px;
+  color: #9fb3d9;
+  font-size: 14px;
+}
+
+.play-btn {
+  display: inline-block;
+  margin-top: 28px;
+  padding: 14px 40px;
+  border: 1px solid #4ad9ff;
+  border-radius: 4px;
+  color: #4ad9ff;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  background: rgba(74, 217, 255, 0.08);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.play-btn:hover {
+  background: rgba(74, 217, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ---- Sections ---- */
+section {
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+h2 {
+  color: #ff3d7a;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 20px;
+}
+
+/* ---- Game embed ---- */
+.stage {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.game-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 480 / 720;
+  background: #0a0e18;
+  border: 1px solid rgba(74, 217, 255, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.game-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.new-tab-link {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #5d6f92;
+}
+
+/* ---- How to play ---- */
+.howto {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.howto .card {
+  background: #0d1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 16px 18px;
+}
+
+.howto .card h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #4ad9ff;
+}
+
+.howto .card p {
+  margin: 0;
+  font-size: 13px;
+  color: #b7c3dc;
+}
+
+@media (max-width: 560px) {
+  .howto {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Screenshots ---- */
+.shots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.shots img {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .shots {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Intro text ---- */
+.intro p {
+  color: #b7c3dc;
+  font-size: 14px;
+}
+
+/* ---- Footer ---- */
+footer {
+  padding: 28px 0 48px;
+  text-align: center;
+  color: #4a5674;
+  font-size: 11px;
+}
+
+footer a {
+  color: #6b7ba0;
+}
