@@ -94,12 +94,14 @@ const playerBullets = new BulletPool(images.bulletPlayer, {
   drawWidth: 6,
   drawHeight: 42,
   faceUp: true,
+  maxBullets: 180,
 });
 const enemyBullets = new BulletPool(images.bulletEnemy, {
   radius: 4.5,
   drawWidth: 14,
   drawHeight: 14,
   faceUp: false,
+  maxBullets: 220,
 });
 const enemyManager = new EnemyManager({ A: images.enemyA, B: images.enemyB, C: images.enemyC });
 const itemManager = new ItemDropManager(images.item);
@@ -121,7 +123,7 @@ let comboTimer = 0;
 let grazeGained = 0;
 let resultInfo = null;
 
-const COMBO_WINDOW = 1.6;
+const COMBO_WINDOW = 2.4;
 
 function resetGame() {
   player.reset();
@@ -146,7 +148,7 @@ function resetGame() {
 function awardKillScore(basePoints) {
   combo += 1;
   comboTimer = COMBO_WINDOW;
-  const mult = 1 + Math.min(combo - 1, 10) * 0.1;
+  const mult = 1 + Math.min(combo - 1, 12) * 0.12;
   const total = Math.round(basePoints * mult);
   score += total;
   return total;
@@ -296,7 +298,7 @@ function triggerPulse() {
 
 function handleCapsulePickup(kind) {
   if (kind === 'speed') {
-    player.stats.followLerp = Math.min(0.9, player.stats.followLerp + 0.05);
+    player.stats.followLerp = Math.min(0.9, player.stats.followLerp + 0.08);
     effects.spawnScorePopup(player.x, player.y - 24, 'SPEED UP!', '#4ad9ff');
   } else if (kind === 'shield') {
     player.stats.shieldCharges = Math.min(3, player.stats.shieldCharges + 1);

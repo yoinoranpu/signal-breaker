@@ -4,18 +4,20 @@ const OFFSCREEN_MARGIN = 40;
 
 // 自弾/敵弾で使い回すオブジェクトプール(生成・破棄コストを避ける)
 export class BulletPool {
-  constructor(sprite, { radius, drawWidth, drawHeight, faceUp = false }) {
+  constructor(sprite, { radius, drawWidth, drawHeight, faceUp = false, maxBullets = 260 }) {
     this.sprite = sprite;
     this.radius = radius;
     this.drawWidth = drawWidth;
     this.drawHeight = drawHeight;
     this.faceUp = faceUp; // スプライトが初期状態で上向きなら角度に合わせて回転させる
+    this.maxBullets = maxBullets; // 分裂・貫通・反射の組み合わせで際限なく増えないための上限
     this.bullets = [];
   }
 
   spawn(x, y, vx, vy, damage = 1, options = {}) {
     let b = this.bullets.find((b) => !b.active);
     if (!b) {
+      if (this.bullets.length >= this.maxBullets) return null;
       b = { active: false, x: 0, y: 0, vx: 0, vy: 0, damage: 1 };
       this.bullets.push(b);
     }
@@ -71,7 +73,8 @@ export class BulletPool {
     const hh = this.drawHeight / 2;
     for (const b of this.bullets) {
       if (!b.active) continue;
-      if (this.faceUp) {
+      if (this.faceUp && Math.abs(b.vx) > 0.5) {
+        // 角度がついている弾だけ回転描画(直進弾は変形なしの高速パスにする)
         const angle = Math.atan2(b.vy, b.vx) + Math.PI / 2;
         ctx.save();
         ctx.translate(b.x, b.y);

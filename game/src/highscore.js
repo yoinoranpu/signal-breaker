@@ -23,9 +23,9 @@ export function updateHighScore(score) {
 }
 
 export function getRank(score) {
-  if (score >= 20000) return 'S';
-  if (score >= 14000) return 'A';
+  if (score >= 15000) return 'S';
+  if (score >= 12000) return 'A';
   if (score >= 9000) return 'B';
-  if (score >= 5000) return 'C';
+  if (score >= 6000) return 'C';
   return 'D';
 }

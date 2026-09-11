@@ -21,7 +21,7 @@ const TYPE_C = {
   score: 1000,
 };
 
-const ENEMY_BULLET_SPEED = 190;
+const ENEMY_BULLET_SPEED = 215;
 
 function spawnTypeA(x) {
   return {

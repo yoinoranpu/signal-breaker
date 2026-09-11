@@ -6,7 +6,7 @@ const MAX_HP = 120;
 const RADIUS = 60;
 const DRAW_SIZE = 150;
 const REST_Y = 170;
-const BULLET_SPEED = 210;
+const BULLET_SPEED = 230;
 
 export class Boss {
   constructor(sprites) {
@@ -77,7 +77,7 @@ export class Boss {
   updatePhase1(dt, enemyBullets, player) {
     this.aimTimer -= dt;
     if (this.aimTimer <= 0) {
-      this.aimTimer = 1.5;
+      this.aimTimer = 1.2;
       const angle = Math.atan2(player.y - this.y, player.x - this.x);
       enemyBullets.spawnAngle(this.x, this.y, angle - 0.35, BULLET_SPEED);
       enemyBullets.spawnAngle(this.x, this.y, angle, BULLET_SPEED);
@@ -86,7 +86,7 @@ export class Boss {
 
     this.spreadTimer -= dt;
     if (this.spreadTimer <= 0) {
-      this.spreadTimer = 4;
+      this.spreadTimer = 3.3;
       const count = 12;
       for (let i = 0; i < count; i++) {
         const a = (Math.PI * 2 * i) / count;
@@ -113,7 +113,7 @@ export class Boss {
     } else {
       this.aimTimer -= dt;
       if (this.aimTimer <= 0) {
-        this.aimTimer = 1.0;
+        this.aimTimer = 0.8;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
         enemyBullets.spawnAngle(this.x, this.y, angle - 0.35, BULLET_SPEED);
         enemyBullets.spawnAngle(this.x, this.y, angle, BULLET_SPEED);

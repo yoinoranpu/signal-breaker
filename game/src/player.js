@@ -7,7 +7,7 @@ export function createDefaultStats() {
     damageMult: 1,
     fireInterval: 0.28,
     threeWay: false,
-    followLerp: 0.25,
+    followLerp: 0.15,
     hitRadius: 4,
     invulnTime: 2.0,
     bulletSpeed: 600,
