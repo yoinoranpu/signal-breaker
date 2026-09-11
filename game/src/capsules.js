@@ -3,6 +3,7 @@ import { circleHit } from './utils.js';
 
 const DRIFT_SPEED = 55;
 const RADIUS = 10;
+const DRAW_SIZE = 26;
 
 const COLORS = {
   speed: '#4ad9ff',
@@ -18,7 +19,8 @@ const LETTERS = {
 
 // 通常撃破からたまに流れてくる軽量な即時強化カプセル(3択の大きな強化とは別枠)
 export class CapsuleManager {
-  constructor() {
+  constructor(icons = {}) {
+    this.icons = icons; // { speed, shield, power }
     this.items = [];
   }
 
@@ -48,6 +50,11 @@ export class CapsuleManager {
 
   draw(ctx) {
     for (const c of this.items) {
+      const icon = this.icons[c.kind];
+      if (icon && icon.complete && icon.naturalWidth > 0) {
+        ctx.drawImage(icon, c.x - DRAW_SIZE / 2, c.y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE);
+        continue;
+      }
       ctx.save();
       ctx.shadowColor = COLORS[c.kind];
       ctx.shadowBlur = 10;

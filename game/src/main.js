@@ -54,6 +54,12 @@ const images = {
   item: loadImage('assets/images/item_drop.png'),
   logo: loadImage('assets/images/logo_title.png'),
   background: loadImage('assets/images/background.jpg'),
+  escort: loadImage('assets/images/escort.png'),
+  capsule: {
+    speed: loadImage('assets/images/capsule_speed.png'),
+    shield: loadImage('assets/images/capsule_shield.png'),
+    power: loadImage('assets/images/capsule_power.png'),
+  },
   upgrade: {
     atk: loadImage('assets/images/upgrade_atk.png'),
     firerate: loadImage('assets/images/upgrade_firerate.png'),
@@ -63,6 +69,11 @@ const images = {
     invuln: loadImage('assets/images/upgrade_invuln.png'),
     life: loadImage('assets/images/upgrade_life.png'),
     bulletspeed: loadImage('assets/images/upgrade_bulletspeed.png'),
+    escort: loadImage('assets/images/upgrade_escort.png'),
+    homing: loadImage('assets/images/upgrade_homing.png'),
+    pierce: loadImage('assets/images/upgrade_pierce.png'),
+    barrier: loadImage('assets/images/upgrade_barrier.png'),
+    pulse: loadImage('assets/images/upgrade_pulse.png'),
   },
 };
 
@@ -92,8 +103,8 @@ const enemyBullets = new BulletPool(images.bulletEnemy, {
 });
 const enemyManager = new EnemyManager({ A: images.enemyA, B: images.enemyB, C: images.enemyC });
 const itemManager = new ItemDropManager(images.item);
-const capsuleManager = new CapsuleManager();
-const escortManager = new EscortManager(images.player);
+const capsuleManager = new CapsuleManager(images.capsule);
+const escortManager = new EscortManager(images.escort);
 const effects = new EffectManager();
 const upgradeMenu = new UpgradeMenu(images.upgrade);
 

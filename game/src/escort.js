@@ -1,4 +1,4 @@
-const SIZE = 18;
+const DRAW_WIDTH = 18;
 const OFFSET_X = 24;
 const OFFSET_Y = 12;
 const FIRE_INTERVAL = 0.4;
@@ -44,9 +44,10 @@ export class EscortManager {
 
   draw(ctx) {
     if (!this.sprite.complete || this.sprite.naturalWidth === 0) return;
-    const half = SIZE / 2;
+    const w = DRAW_WIDTH;
+    const h = w * (this.sprite.naturalHeight / this.sprite.naturalWidth);
     for (const s of this.ships) {
-      ctx.drawImage(this.sprite, s.x - half, s.y - half, SIZE, SIZE);
+      ctx.drawImage(this.sprite, s.x - w / 2, s.y - h / 2, w, h);
     }
   }
 }
