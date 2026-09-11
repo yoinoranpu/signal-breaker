@@ -1,5 +1,6 @@
 import { GAME_WIDTH } from './constants.js';
 import { circleHit } from './utils.js';
+import { trySpawnSplit } from './bullets.js';
 
 const MAX_HP = 120;
 const RADIUS = 60;
@@ -125,6 +126,7 @@ export class Boss {
     for (const b of playerBullets.bullets) {
       if (!b.active) continue;
       if (circleHit(this.x, this.y, RADIUS, b.x, b.y, playerBullets.radius)) {
+        trySpawnSplit(b, playerBullets);
         if (b.pierceLeft > 0) b.pierceLeft -= 1;
         else b.active = false;
         this.hp -= b.damage;

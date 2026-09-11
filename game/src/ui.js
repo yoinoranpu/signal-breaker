@@ -18,7 +18,7 @@ export function isPointInRect(x, y, r) {
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 
-export function drawTitle(ctx, images, time) {
+export function drawTitle(ctx, images, time, highScore = 0) {
   ctx.fillStyle = '#05060a';
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -33,6 +33,12 @@ export function drawTitle(ctx, images, time) {
   ctx.fillStyle = '#9fb3d9';
   ctx.font = '13px sans-serif';
   ctx.fillText('暴走したネットワーク防衛システムの中枢を止めるため、単機で潜入する', GAME_WIDTH / 2, 420, GAME_WIDTH - 60);
+
+  if (highScore > 0) {
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`HIGH SCORE ${highScore}`, GAME_WIDTH / 2, 452);
+  }
 
   if (Math.floor(time / 0.6) % 2 === 0) {
     ctx.fillStyle = '#4ad9ff';
@@ -168,18 +174,40 @@ export function drawBossWarning(ctx, elapsed) {
   ctx.textAlign = 'left';
 }
 
-function drawResultScreen(ctx, title, titleColor, score, buttonLabel) {
+function drawResultScreen(ctx, title, titleColor, score, buttonLabel, { rank, isNewRecord, highScore, graze } = {}) {
   ctx.fillStyle = 'rgba(2,4,10,0.85)';
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = titleColor;
   ctx.font = 'bold 42px sans-serif';
-  ctx.fillText(title, GAME_WIDTH / 2, 300);
+  ctx.fillText(title, GAME_WIDTH / 2, 280);
+
+  if (rank) {
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillText(`RANK ${rank}`, GAME_WIDTH / 2, 320);
+  }
 
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(`SCORE ${score}`, GAME_WIDTH / 2, 350);
+  ctx.fillText(`SCORE ${score}`, GAME_WIDTH / 2, 360);
+
+  if (isNewRecord) {
+    ctx.fillStyle = '#ff8a3d';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('NEW RECORD!', GAME_WIDTH / 2, 384);
+  } else if (highScore) {
+    ctx.fillStyle = '#5d6f92';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`HIGH SCORE ${highScore}`, GAME_WIDTH / 2, 384);
+  }
+
+  if (graze) {
+    ctx.fillStyle = '#5d6f92';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`GRAZE ${graze}`, GAME_WIDTH / 2, 404);
+  }
 
   const r = RETRY_BUTTON;
   ctx.fillStyle = '#131a2b';
@@ -194,10 +222,19 @@ function drawResultScreen(ctx, title, titleColor, score, buttonLabel) {
   ctx.textAlign = 'left';
 }
 
-export function drawClear(ctx, score) {
-  drawResultScreen(ctx, 'CLEAR', '#4ad9ff', score, 'もう一度遊ぶ');
+export function drawClear(ctx, score, extra) {
+  drawResultScreen(ctx, 'CLEAR', '#4ad9ff', score, 'もう一度遊ぶ', extra);
 }
 
-export function drawGameOver(ctx, score) {
-  drawResultScreen(ctx, 'GAME OVER', '#ff3d7a', score, 'もう一度遊ぶ');
+export function drawGameOver(ctx, score, extra) {
+  drawResultScreen(ctx, 'GAME OVER', '#ff3d7a', score, 'もう一度遊ぶ', extra);
+}
+
+export function drawCombo(ctx, combo) {
+  if (combo < 2) return;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`COMBO x${combo}`, GAME_WIDTH / 2, 96);
+  ctx.textAlign = 'left';
 }

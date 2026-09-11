@@ -9,6 +9,7 @@ import { CapsuleManager, randomCapsuleKind } from './capsules.js';
 import { EscortManager } from './escort.js';
 import { EffectManager } from './effects.js';
 import { registerSfx, playSfx, BgmPlayer, getVolumeSettings, setBgmVolume, setSeVolume } from './audio.js';
+import { getHighScore, updateHighScore, getRank } from './highscore.js';
 import {
   RETRY_BUTTON,
   PAUSE_BUTTON,
@@ -26,6 +27,7 @@ import {
   drawBossWarning,
   drawClear,
   drawGameOver,
+  drawCombo,
 } from './ui.js';
 
 const canvas = document.getElementById('game');
@@ -103,6 +105,12 @@ let bgScroll = 0;
 let titleTime = 0;
 let paused = false;
 let pulseTimer = 0;
+let combo = 0;
+let comboTimer = 0;
+let grazeGained = 0;
+let resultInfo = null;
+
+const COMBO_WINDOW = 1.6;
 
 function resetGame() {
   player.reset();
@@ -118,6 +126,19 @@ function resetGame() {
   bossWarningTimer = 0;
   paused = false;
   pulseTimer = 0;
+  combo = 0;
+  comboTimer = 0;
+  grazeGained = 0;
+  resultInfo = null;
+}
+
+function awardKillScore(basePoints) {
+  combo += 1;
+  comboTimer = COMBO_WINDOW;
+  const mult = 1 + Math.min(combo - 1, 10) * 0.1;
+  const total = Math.round(basePoints * mult);
+  score += total;
+  return total;
 }
 
 function startStage() {
@@ -250,9 +271,9 @@ function triggerPulse() {
       e.hp -= dmg;
       if (e.hp <= 0) {
         e.dead = true;
-        score += 100;
+        const awarded = awardKillScore(100);
         effects.spawnExplosion(e.x, e.y, '#c084fc');
-        effects.spawnScorePopup(e.x, e.y - 10, '+100', '#c084fc');
+        effects.spawnScorePopup(e.x, e.y - 10, `+${awarded}`, '#c084fc');
       }
     }
   }
@@ -319,6 +340,11 @@ function update(dt) {
   player.update(dt);
   effects.update(dt);
 
+  if (comboTimer > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) combo = 0;
+  }
+
   const fireResult = player.tryFire();
   if (fireResult) {
     const dmg = player.getDamageMultiplier();
@@ -327,6 +353,8 @@ function update(dt) {
       playerBullets.spawnAngle(player.x, player.y - 14, angle, player.stats.bulletSpeed, dmg, {
         homing,
         pierce: player.stats.pierceCount,
+        split: player.stats.splitCount,
+        bounce: player.stats.bounce,
       });
     });
     playSfx('shot', 0.2);
@@ -353,21 +381,21 @@ function update(dt) {
       playSfx('bossTransition', 0.5);
     }
     if (boss.defeated) {
-      score += 5000;
+      const awarded = awardKillScore(5000);
       state = STATE.CLEAR;
       effects.spawnExplosion(boss.x, boss.y, '#ff8a3d', 30);
-      effects.spawnScorePopup(boss.x, boss.y - 20, '+5000', '#ff8a3d');
+      effects.spawnScorePopup(boss.x, boss.y - 20, `+${awarded}`, '#ff8a3d');
       playSfx('clear', 0.6);
       bgmPlayer.play('clear', 'assets/sounds/bgm/title.mp3', { volume: 0.4 });
+      const isNewRecord = updateHighScore(score);
+      resultInfo = { rank: getRank(score), isNewRecord, highScore: getHighScore(), graze: grazeGained };
     }
   } else {
     enemyManager.update(dt, {
       player,
       playerBullets,
       enemyBullets,
-      onScore: (v) => {
-        score += v;
-      },
+      onScore: (v) => awardKillScore(v),
       onExplosion: (x, y, points) => {
         playSfx('explosion', 0.3);
         effects.spawnExplosion(x, y);
@@ -387,6 +415,7 @@ function update(dt) {
   }
 
   // 敵弾 vs 自機
+  const grazeRadius = player.hitRadius + 16;
   for (const b of enemyBullets.bullets) {
     if (!b.active) continue;
     if (circleHit(player.x, player.y, player.hitRadius, b.x, b.y, enemyBullets.radius)) {
@@ -402,15 +431,22 @@ function update(dt) {
           state = STATE.GAMEOVER;
           playSfx('gameover', 0.6);
           bgmPlayer.stop();
+          const isNewRecord = updateHighScore(score);
+          resultInfo = { isNewRecord, highScore: getHighScore(), graze: grazeGained };
         }
       }
+    } else if (!b.grazed && circleHit(player.x, player.y, grazeRadius, b.x, b.y, enemyBullets.radius)) {
+      b.grazed = true;
+      score += 2;
+      grazeGained += 1;
+      effects.spawnExplosion(b.x, b.y, '#ffffff', 3);
     }
   }
 }
 
 function draw() {
   if (state === STATE.TITLE) {
-    drawTitle(ctx, images, titleTime);
+    drawTitle(ctx, images, titleTime, getHighScore());
     return;
   }
 
@@ -432,6 +468,7 @@ function draw() {
   effects.draw(ctx);
 
   drawHUD(ctx, { lives: player.lives, score, shieldCharges: player.stats.shieldCharges });
+  drawCombo(ctx, combo);
   if (boss) drawBossHpBar(ctx, boss.hpRatio);
 
   if (state === STATE.BOSS_WARNING) {
@@ -450,8 +487,8 @@ function draw() {
     drawPauseMenu(ctx, getVolumeSettings());
   }
 
-  if (state === STATE.CLEAR) drawClear(ctx, score);
-  if (state === STATE.GAMEOVER) drawGameOver(ctx, score);
+  if (state === STATE.CLEAR) drawClear(ctx, score, resultInfo);
+  if (state === STATE.GAMEOVER) drawGameOver(ctx, score, resultInfo);
 }
 
 requestAnimationFrame(loop);

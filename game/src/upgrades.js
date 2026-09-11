@@ -123,6 +123,24 @@ export const UPGRADE_POOL = [
       stats.pulseInterval = stats.pulseInterval === 0 ? 9 : Math.max(4, stats.pulseInterval - 2);
     },
   },
+  {
+    id: 'split',
+    name: 'スプリット弾',
+    desc: '命中した自弾が分裂して追加の弾になる(取得済みなら分裂数アップ)',
+    icon: 'split',
+    apply(stats) {
+      stats.splitCount = Math.min(3, stats.splitCount + 1);
+    },
+  },
+  {
+    id: 'bounce',
+    name: '反射弾',
+    desc: '自弾が画面の左右の壁で跳ね返るようになる',
+    icon: 'bounce',
+    apply(stats) {
+      stats.bounce = true;
+    },
+  },
 ];
 
 export function pickRandomThree() {
@@ -337,6 +355,37 @@ function drawProceduralIcon(ctx, key, cx, cy, size) {
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = '#7dffb0';
     ctx.fill();
+  } else if (key === 'split') {
+    ctx.strokeStyle = '#4ad9ff';
+    ctx.beginPath();
+    ctx.moveTo(0, s * 0.8);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-s * 0.7, -s * 0.8);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(s * 0.7, -s * 0.8);
+    ctx.stroke();
+    ctx.fillStyle = '#4ad9ff';
+    for (const [dx, dy] of [
+      [0, s * 0.8],
+      [-s * 0.7, -s * 0.8],
+      [s * 0.7, -s * 0.8],
+    ]) {
+      ctx.beginPath();
+      ctx.arc(dx, dy, s * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (key === 'bounce') {
+    ctx.strokeStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.8, -s * 0.6);
+    ctx.lineTo(0, s * 0.6);
+    ctx.lineTo(s * 0.8, -s * 0.6);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(s * 0.85, -s);
+    ctx.lineTo(s * 0.85, s);
+    ctx.stroke();
   } else if (key === 'pulse') {
     ctx.strokeStyle = '#c084fc';
     for (const r of [0.3, 0.55, 0.8]) {

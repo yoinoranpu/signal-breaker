@@ -1,5 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { circleHit, randRange } from './utils.js';
+import { trySpawnSplit } from './bullets.js';
 
 const TYPE_A = {
   hp: 2,
@@ -176,13 +177,14 @@ export class EnemyManager {
       for (const b of playerBullets.bullets) {
         if (!b.active || e.dead) continue;
         if (circleHit(e.x, e.y, spec.radius, b.x, b.y, playerBullets.radius)) {
+          trySpawnSplit(b, playerBullets);
           if (b.pierceLeft > 0) b.pierceLeft -= 1;
           else b.active = false;
           e.hp -= b.damage;
           if (e.hp <= 0) {
             e.dead = true;
-            onScore(spec.score);
-            if (onExplosion) onExplosion(e.x, e.y, spec.score);
+            const awarded = onScore(spec.score);
+            if (onExplosion) onExplosion(e.x, e.y, awarded);
             if (e.type === 'C') {
               onItemDrop(e.x, e.y);
             } else if (onCapsuleDrop && Math.random() < 0.14) {

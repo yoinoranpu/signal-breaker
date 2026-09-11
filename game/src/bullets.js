@@ -27,6 +27,10 @@ export class BulletPool {
     b.damage = damage;
     b.pierceLeft = options.pierce || 0;
     b.homing = !!options.homing;
+    b.splitLeft = options.split || 0;
+    b.hasSplit = false;
+    b.bounce = !!options.bounce;
+    b.grazed = false;
     return b;
   }
 
@@ -39,6 +43,17 @@ export class BulletPool {
       if (!b.active) continue;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
+
+      if (b.bounce) {
+        if (b.x < 0) {
+          b.x = 0;
+          b.vx = Math.abs(b.vx);
+        } else if (b.x > GAME_WIDTH) {
+          b.x = GAME_WIDTH;
+          b.vx = -Math.abs(b.vx);
+        }
+      }
+
       if (
         b.x < -OFFSCREEN_MARGIN ||
         b.x > GAME_WIDTH + OFFSCREEN_MARGIN ||
@@ -71,5 +86,19 @@ export class BulletPool {
 
   clear() {
     for (const b of this.bullets) b.active = false;
+  }
+}
+
+// 命中した弾から分裂弾を発生させる(1発につき1回のみ)
+export function trySpawnSplit(b, pool) {
+  if (b.splitLeft <= 0 || b.hasSplit) return;
+  b.hasSplit = true;
+  const pairs = Math.min(3, b.splitLeft);
+  const baseAngle = Math.atan2(b.vy, b.vx);
+  const speed = Math.hypot(b.vx, b.vy);
+  for (let i = 1; i <= pairs; i++) {
+    const offset = ((Math.PI / 180) * 15) * i;
+    pool.spawnAngle(b.x, b.y, baseAngle - offset, speed, b.damage * 0.5);
+    pool.spawnAngle(b.x, b.y, baseAngle + offset, speed, b.damage * 0.5);
   }
 }

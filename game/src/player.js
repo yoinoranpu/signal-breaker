@@ -16,6 +16,8 @@ export function createDefaultStats() {
     escortCount: 0,
     homingEvery: 0,
     pulseInterval: 0,
+    splitCount: 0,
+    bounce: false,
   };
 }
 
