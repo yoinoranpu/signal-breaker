@@ -5,12 +5,23 @@ import { BulletPool } from './bullets.js';
 import { EnemyManager } from './enemies.js';
 import { Boss } from './boss.js';
 import { ItemDropManager, UpgradeMenu } from './upgrades.js';
-import { registerSfx, playSfx, BgmPlayer } from './audio.js';
+import { CapsuleManager, randomCapsuleKind } from './capsules.js';
+import { EscortManager } from './escort.js';
+import { EffectManager } from './effects.js';
+import { registerSfx, playSfx, BgmPlayer, getVolumeSettings, setBgmVolume, setSeVolume } from './audio.js';
 import {
   RETRY_BUTTON,
+  PAUSE_BUTTON,
+  RESUME_BUTTON,
+  TITLE_BUTTON,
+  BGM_SLIDER,
+  SE_SLIDER,
   isPointInRect,
+  sliderValueAt,
   drawTitle,
   drawHUD,
+  drawPauseButton,
+  drawPauseMenu,
   drawBossHpBar,
   drawBossWarning,
   drawClear,
@@ -57,6 +68,7 @@ const images = {
 registerSfx('shot', 'assets/sounds/se/shot1.mp3');
 registerSfx('explosion', 'assets/sounds/se/bomb1.mp3');
 registerSfx('hit', 'assets/sounds/se/blow2.mp3');
+registerSfx('shield', 'assets/sounds/se/shot-struck1.mp3');
 registerSfx('bossTransition', 'assets/sounds/se/base-siren1.mp3');
 registerSfx('clear', 'assets/sounds/se/trumpet1.mp3');
 registerSfx('gameover', 'assets/sounds/se/curse-melody1.mp3');
@@ -78,6 +90,9 @@ const enemyBullets = new BulletPool(images.bulletEnemy, {
 });
 const enemyManager = new EnemyManager({ A: images.enemyA, B: images.enemyB, C: images.enemyC });
 const itemManager = new ItemDropManager(images.item);
+const capsuleManager = new CapsuleManager();
+const escortManager = new EscortManager(images.player);
+const effects = new EffectManager();
 const upgradeMenu = new UpgradeMenu(images.upgrade);
 
 let boss = null;
@@ -86,6 +101,8 @@ let score = 0;
 let bossWarningTimer = 0;
 let bgScroll = 0;
 let titleTime = 0;
+let paused = false;
+let pulseTimer = 0;
 
 function resetGame() {
   player.reset();
@@ -93,15 +110,26 @@ function resetGame() {
   enemyBullets.clear();
   enemyManager.reset();
   itemManager.reset();
+  capsuleManager.reset();
+  escortManager.reset();
+  effects.reset();
   boss = null;
   score = 0;
   bossWarningTimer = 0;
+  paused = false;
+  pulseTimer = 0;
 }
 
 function startStage() {
   resetGame();
   state = STATE.PLAYING;
   bgmPlayer.play('stage', 'assets/sounds/bgm/stage.mp3', { volume: 0.45 });
+}
+
+function returnToTitle() {
+  resetGame();
+  bgmPlayer.stop();
+  state = STATE.TITLE;
 }
 
 // --- 入力 ---
@@ -124,9 +152,24 @@ function onPointerDown(e) {
 
   if (state === STATE.TITLE) {
     startStage();
+  } else if (state === STATE.PLAYING && paused) {
+    const vol = getVolumeSettings();
+    if (isPointInRect(x, y, BGM_SLIDER)) {
+      setBgmVolume(sliderValueAt(BGM_SLIDER, x));
+    } else if (isPointInRect(x, y, SE_SLIDER)) {
+      setSeVolume(sliderValueAt(SE_SLIDER, x));
+    } else if (isPointInRect(x, y, RESUME_BUTTON)) {
+      paused = false;
+    } else if (isPointInRect(x, y, TITLE_BUTTON)) {
+      returnToTitle();
+    }
+    return;
   } else if (state === STATE.PLAYING && upgradeMenu.active) {
     const chosen = upgradeMenu.handleClick(x, y);
     if (chosen) chosen.apply(player.stats, player);
+  } else if (state === STATE.PLAYING && isPointInRect(x, y, PAUSE_BUTTON)) {
+    paused = true;
+    return;
   } else if (state === STATE.CLEAR || state === STATE.GAMEOVER) {
     if (isPointInRect(x, y, RETRY_BUTTON)) {
       startStage();
@@ -156,6 +199,82 @@ function drawBackground() {
   ctx.drawImage(bg, 0, y0, GAME_WIDTH, drawH);
 }
 
+// --- 誘導弾の追尾処理 ---
+function steerHomingBullets(dt) {
+  const targets = [];
+  if (boss) {
+    targets.push({ x: boss.x, y: boss.y });
+  } else {
+    for (const e of enemyManager.enemies) targets.push({ x: e.x, y: e.y });
+  }
+  if (targets.length === 0) return;
+
+  const turnRate = 5.5; // ラジアン/秒
+  for (const b of playerBullets.bullets) {
+    if (!b.active || !b.homing) continue;
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const t of targets) {
+      const d = (t.x - b.x) ** 2 + (t.y - b.y) ** 2;
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearest = t;
+      }
+    }
+    if (!nearest) continue;
+    const speed = Math.hypot(b.vx, b.vy);
+    const currentAngle = Math.atan2(b.vy, b.vx);
+    const targetAngle = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+    let diff = targetAngle - currentAngle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    const maxTurn = turnRate * dt;
+    const applied = Math.max(-maxTurn, Math.min(maxTurn, diff));
+    const newAngle = currentAngle + applied;
+    b.vx = Math.cos(newAngle) * speed;
+    b.vy = Math.sin(newAngle) * speed;
+  }
+}
+
+// --- パルスウェーブ(周囲の敵弾を消し、周囲の敵にダメージ) ---
+function triggerPulse() {
+  const radius = 110;
+  for (const b of enemyBullets.bullets) {
+    if (!b.active) continue;
+    if (circleHit(player.x, player.y, radius, b.x, b.y, 0)) b.active = false;
+  }
+  const dmg = 3;
+  for (const e of enemyManager.enemies) {
+    if (e.dead) continue;
+    if (circleHit(player.x, player.y, radius, e.x, e.y, 0)) {
+      e.hp -= dmg;
+      if (e.hp <= 0) {
+        e.dead = true;
+        score += 100;
+        effects.spawnExplosion(e.x, e.y, '#c084fc');
+        effects.spawnScorePopup(e.x, e.y - 10, '+100', '#c084fc');
+      }
+    }
+  }
+  if (boss && circleHit(player.x, player.y, radius, boss.x, boss.y, 0)) {
+    boss.hp -= dmg;
+  }
+  effects.spawnRing(player.x, player.y, '#c084fc', radius);
+}
+
+function handleCapsulePickup(kind) {
+  if (kind === 'speed') {
+    player.stats.followLerp = Math.min(0.9, player.stats.followLerp + 0.05);
+    effects.spawnScorePopup(player.x, player.y - 24, 'SPEED UP!', '#4ad9ff');
+  } else if (kind === 'shield') {
+    player.stats.shieldCharges = Math.min(3, player.stats.shieldCharges + 1);
+    effects.spawnScorePopup(player.x, player.y - 24, 'SHIELD!', '#7dffb0');
+  } else if (kind === 'power') {
+    player.tempBoostTimer = 8;
+    effects.spawnScorePopup(player.x, player.y - 24, 'POWER UP!', '#ff8a3d');
+  }
+}
+
 // --- メインループ ---
 let lastTime = performance.now();
 
@@ -170,6 +289,8 @@ function loop(now) {
 }
 
 function update(dt) {
+  canvas.classList.toggle('hide-cursor', state === STATE.PLAYING && !upgradeMenu.active && !paused);
+
   if (state === STATE.TITLE) {
     titleTime += dt;
     return;
@@ -190,32 +311,53 @@ function update(dt) {
   }
 
   // STATE.PLAYING
-  if (upgradeMenu.active) {
-    return; // 選択中はゲーム側を一時停止
+  if (paused || upgradeMenu.active) {
+    return; // 一時停止/選択中はゲーム側を止める
   }
 
   bgScroll += 40 * dt;
   player.update(dt);
-  const fireAngles = player.tryFire();
-  if (fireAngles) {
-    for (const angle of fireAngles) {
-      playerBullets.spawnAngle(player.x, player.y - 14, angle, player.stats.bulletSpeed, player.stats.damageMult);
-    }
-    playSfx('shot', 0.25);
+  effects.update(dt);
+
+  const fireResult = player.tryFire();
+  if (fireResult) {
+    const dmg = player.getDamageMultiplier();
+    fireResult.angles.forEach((angle, i) => {
+      const homing = fireResult.isHoming && i === Math.floor(fireResult.angles.length / 2);
+      playerBullets.spawnAngle(player.x, player.y - 14, angle, player.stats.bulletSpeed, dmg, {
+        homing,
+        pierce: player.stats.pierceCount,
+      });
+    });
+    playSfx('shot', 0.2);
   }
   playerBullets.update(dt);
   enemyBullets.update(dt);
+  steerHomingBullets(dt);
+
+  escortManager.sync(player.stats.escortCount);
+  escortManager.update(dt, player, playerBullets, player.getDamageMultiplier());
+
+  if (player.stats.pulseInterval > 0) {
+    pulseTimer -= dt;
+    if (pulseTimer <= 0) {
+      pulseTimer = player.stats.pulseInterval;
+      triggerPulse();
+    }
+  }
 
   if (boss) {
     boss.update(dt, { enemyBullets, player, playerBullets });
     if (boss.justTransitioned) {
       boss.justTransitioned = false;
-      playSfx('bossTransition', 0.6);
+      playSfx('bossTransition', 0.5);
     }
     if (boss.defeated) {
       score += 5000;
       state = STATE.CLEAR;
-      playSfx('clear', 0.7);
+      effects.spawnExplosion(boss.x, boss.y, '#ff8a3d', 30);
+      effects.spawnScorePopup(boss.x, boss.y - 20, '+5000', '#ff8a3d');
+      playSfx('clear', 0.6);
       bgmPlayer.play('clear', 'assets/sounds/bgm/title.mp3', { volume: 0.4 });
     }
   } else {
@@ -225,12 +367,18 @@ function update(dt) {
       enemyBullets,
       onScore: (v) => {
         score += v;
-        playSfx('explosion', 0.35);
+      },
+      onExplosion: (x, y, points) => {
+        playSfx('explosion', 0.3);
+        effects.spawnExplosion(x, y);
+        effects.spawnScorePopup(x, y - 10, `+${points}`, '#ffd166');
       },
       onItemDrop: (x, y) => itemManager.spawn(x, y),
+      onCapsuleDrop: (x, y) => capsuleManager.spawn(x, y, randomCapsuleKind()),
     });
 
     itemManager.update(dt, player, () => upgradeMenu.open());
+    capsuleManager.update(dt, player, (kind) => handleCapsulePickup(kind));
 
     if (enemyManager.isStageComplete()) {
       state = STATE.BOSS_WARNING;
@@ -243,11 +391,16 @@ function update(dt) {
     if (!b.active) continue;
     if (circleHit(player.x, player.y, player.hitRadius, b.x, b.y, enemyBullets.radius)) {
       b.active = false;
-      if (player.takeHit()) {
-        playSfx('hit', 0.6);
+      const result = player.takeHit();
+      if (result === 'shielded') {
+        playSfx('shield', 0.5);
+        effects.triggerHitFlash('#7dffb0');
+      } else if (result === 'hit') {
+        playSfx('hit', 0.5);
+        effects.triggerHitFlash('#ff3d5a');
         if (player.lives <= 0) {
           state = STATE.GAMEOVER;
-          playSfx('gameover', 0.7);
+          playSfx('gameover', 0.6);
           bgmPlayer.stop();
         }
       }
@@ -271,18 +424,31 @@ function draw() {
   } else {
     enemyManager.draw(ctx);
     itemManager.draw(ctx);
+    capsuleManager.draw(ctx);
   }
 
+  escortManager.draw(ctx);
   player.draw(ctx);
+  effects.draw(ctx);
 
-  drawHUD(ctx, { lives: player.lives, score });
+  drawHUD(ctx, { lives: player.lives, score, shieldCharges: player.stats.shieldCharges });
   if (boss) drawBossHpBar(ctx, boss.hpRatio);
 
   if (state === STATE.BOSS_WARNING) {
     drawBossWarning(ctx, bossWarningTimer);
   }
 
+  if (state === STATE.PLAYING && !upgradeMenu.active) {
+    drawPauseButton(ctx);
+  }
+
   upgradeMenu.draw(ctx);
+
+  effects.drawScreenFlash(ctx);
+
+  if (paused) {
+    drawPauseMenu(ctx, getVolumeSettings());
+  }
 
   if (state === STATE.CLEAR) drawClear(ctx, score);
   if (state === STATE.GAMEOVER) drawGameOver(ctx, score);

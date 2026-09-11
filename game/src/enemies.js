@@ -154,7 +154,7 @@ export class EnemyManager {
     this.stageTime = 0;
   }
 
-  update(dt, { player, playerBullets, enemyBullets, onScore, onItemDrop }) {
+  update(dt, { player, playerBullets, enemyBullets, onScore, onItemDrop, onCapsuleDrop, onExplosion }) {
     this.stageTime += dt;
 
     while (
@@ -176,12 +176,18 @@ export class EnemyManager {
       for (const b of playerBullets.bullets) {
         if (!b.active || e.dead) continue;
         if (circleHit(e.x, e.y, spec.radius, b.x, b.y, playerBullets.radius)) {
-          b.active = false;
+          if (b.pierceLeft > 0) b.pierceLeft -= 1;
+          else b.active = false;
           e.hp -= b.damage;
           if (e.hp <= 0) {
             e.dead = true;
             onScore(spec.score);
-            if (e.type === 'C') onItemDrop(e.x, e.y);
+            if (onExplosion) onExplosion(e.x, e.y, spec.score);
+            if (e.type === 'C') {
+              onItemDrop(e.x, e.y);
+            } else if (onCapsuleDrop && Math.random() < 0.14) {
+              onCapsuleDrop(e.x, e.y);
+            }
           }
         }
       }

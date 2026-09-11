@@ -14,10 +14,10 @@ export const UPGRADE_POOL = [
   {
     id: 'firerate',
     name: '連射速度アップ',
-    desc: '発射間隔を短縮',
+    desc: '発射間隔を大きく短縮',
     icon: 'firerate',
     apply(stats) {
-      stats.fireInterval = Math.max(0.05, stats.fireInterval - 0.05);
+      stats.fireInterval = Math.max(0.08, stats.fireInterval * 0.72);
     },
   },
   {
@@ -78,6 +78,51 @@ export const UPGRADE_POOL = [
       stats.bulletSpeed += 150;
     },
   },
+  {
+    id: 'escort',
+    name: 'エスコート機',
+    desc: '左右に僚機がついて援護射撃(最大2機)',
+    icon: 'escort',
+    apply(stats) {
+      stats.escortCount = Math.min(2, stats.escortCount + 1);
+    },
+  },
+  {
+    id: 'homing',
+    name: '誘導弾',
+    desc: '一定間隔で自弾が敵を追尾する(取得済みなら頻度アップ)',
+    icon: 'homing',
+    apply(stats) {
+      stats.homingEvery = stats.homingEvery === 0 ? 5 : Math.max(2, stats.homingEvery - 1);
+    },
+  },
+  {
+    id: 'pierce',
+    name: '貫通弾',
+    desc: '自弾が敵を貫通するようになる(取得済みならさらに+1体)',
+    icon: 'pierce',
+    apply(stats) {
+      stats.pierceCount += 1;
+    },
+  },
+  {
+    id: 'barrier',
+    name: 'バリア',
+    desc: '被弾を1回無効化するシールドを1枚獲得',
+    icon: 'barrier',
+    apply(stats, player) {
+      player.stats.shieldCharges = Math.min(3, player.stats.shieldCharges + 1);
+    },
+  },
+  {
+    id: 'pulse',
+    name: 'パルスウェーブ',
+    desc: '一定間隔で自機周囲の敵弾を消し敵にダメージ(取得済みなら間隔短縮)',
+    icon: 'pulse',
+    apply(stats) {
+      stats.pulseInterval = stats.pulseInterval === 0 ? 9 : Math.max(4, stats.pulseInterval - 2);
+    },
+  },
 ];
 
 export function pickRandomThree() {
@@ -92,6 +137,7 @@ export function pickRandomThree() {
 
 const ITEM_RADIUS = 16;
 const ITEM_DRAW_SIZE = 34;
+const ITEM_DRIFT_SPEED = 45;
 
 export class ItemDropManager {
   constructor(sprite) {
@@ -111,6 +157,11 @@ export class ItemDropManager {
     for (const item of this.items) {
       if (!item.active) continue;
       item.age += dt;
+      item.y += ITEM_DRIFT_SPEED * dt;
+      if (item.y > GAME_HEIGHT + 40) {
+        item.active = false;
+        continue;
+      }
       if (circleHit(item.x, item.y, ITEM_RADIUS, player.x, player.y, player.hitRadius)) {
         item.active = false;
         onPickup();
@@ -130,12 +181,12 @@ export class ItemDropManager {
 }
 
 const CARD_WIDTH = 130;
-const CARD_HEIGHT = 170;
+const CARD_HEIGHT = 192;
 const CARD_GAP = 16;
 
 export class UpgradeMenu {
   constructor(icons) {
-    this.icons = icons; // { atk, firerate, '3way', tracking, hitbox, invuln, life, bulletspeed }
+    this.icons = icons; // 画像アイコン(既存8種)
     this.active = false;
     this.options = [];
     this.cardRects = [];
@@ -169,6 +220,15 @@ export class UpgradeMenu {
     return null;
   }
 
+  drawIcon(ctx, key, cx, cy, size) {
+    const img = this.icons[key];
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
+      return;
+    }
+    drawProceduralIcon(ctx, key, cx, cy, size);
+  }
+
   draw(ctx) {
     if (!this.active) return;
 
@@ -190,19 +250,15 @@ export class UpgradeMenu {
       ctx.fillRect(r.x, r.y, r.w, r.h);
       ctx.strokeRect(r.x, r.y, r.w, r.h);
 
-      const icon = this.icons[opt.icon];
-      if (icon && icon.complete && icon.naturalWidth > 0) {
-        const iconSize = 64;
-        ctx.drawImage(icon, r.x + (r.w - iconSize) / 2, r.y + 14, iconSize, iconSize);
-      }
+      this.drawIcon(ctx, opt.icon, r.x + r.w / 2, r.y + 46, 64);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 14px sans-serif';
-      wrapText(ctx, opt.name, r.x + r.w / 2, r.y + 100, r.w - 12, 16);
+      wrapText(ctx, opt.name, r.x + r.w / 2, r.y + 108, r.w - 12, 16);
 
       ctx.fillStyle = '#9fb3d9';
       ctx.font = '11px sans-serif';
-      wrapText(ctx, opt.desc, r.x + r.w / 2, r.y + 130, r.w - 16, 14);
+      wrapText(ctx, opt.desc, r.x + r.w / 2, r.y + 138, r.w - 16, 14);
     }
 
     ctx.textAlign = 'left';
@@ -226,4 +282,80 @@ function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
 
   ctx.textAlign = 'center';
   lines.forEach((l, i) => ctx.fillText(l, cx, y + i * lineHeight));
+}
+
+// 画像アセットがない新規アビリティ用の簡易ベクターアイコン
+function drawProceduralIcon(ctx, key, cx, cy, size) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.lineWidth = 2.5;
+  const s = size / 2;
+
+  if (key === 'escort') {
+    ctx.fillStyle = '#4ad9ff';
+    drawTriangle(ctx, 0, -s * 0.5, s * 0.55);
+    ctx.globalAlpha = 0.6;
+    drawTriangle(ctx, -s * 0.7, s * 0.3, s * 0.35);
+    drawTriangle(ctx, s * 0.7, s * 0.3, s * 0.35);
+    ctx.globalAlpha = 1;
+  } else if (key === 'homing') {
+    ctx.strokeStyle = '#ff6ec7';
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-s, 0);
+    ctx.lineTo(s, 0);
+    ctx.moveTo(0, -s);
+    ctx.lineTo(0, s);
+    ctx.stroke();
+  } else if (key === 'pierce') {
+    ctx.strokeStyle = '#ffd166';
+    for (const off of [-s * 0.5, 0, s * 0.5]) {
+      ctx.beginPath();
+      ctx.arc(off, 0, s * 0.32, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(-s, 0);
+    ctx.lineTo(s, 0);
+    ctx.stroke();
+  } else if (key === 'barrier') {
+    ctx.strokeStyle = '#7dffb0';
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    for (let i = 1; i <= 6; i++) {
+      const a = -Math.PI / 2 + (Math.PI * 2 * i) / 6;
+      ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#7dffb0';
+    ctx.fill();
+  } else if (key === 'pulse') {
+    ctx.strokeStyle = '#c084fc';
+    for (const r of [0.3, 0.55, 0.8]) {
+      ctx.globalAlpha = 1 - r * 0.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function drawTriangle(ctx, x, y, s) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - s);
+  ctx.lineTo(x - s * 0.7, y + s * 0.7);
+  ctx.lineTo(x + s * 0.7, y + s * 0.7);
+  ctx.closePath();
+  ctx.fill();
 }

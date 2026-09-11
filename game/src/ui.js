@@ -7,6 +7,13 @@ export const RETRY_BUTTON = {
   h: 48,
 };
 
+export const PAUSE_BUTTON = { x: GAME_WIDTH - 34, y: 26, w: 26, h: 26 };
+
+export const RESUME_BUTTON = { x: GAME_WIDTH / 2 - 90, y: 470, w: 180, h: 44 };
+export const TITLE_BUTTON = { x: GAME_WIDTH / 2 - 90, y: 526, w: 180, h: 44 };
+export const BGM_SLIDER = { x: GAME_WIDTH / 2 - 100, y: 300, w: 200, h: 10 };
+export const SE_SLIDER = { x: GAME_WIDTH / 2 - 100, y: 360, w: 200, h: 10 };
+
 export function isPointInRect(x, y, r) {
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
@@ -40,7 +47,7 @@ export function drawTitle(ctx, images, time) {
   ctx.textAlign = 'left';
 }
 
-export function drawHUD(ctx, { lives, score }) {
+export function drawHUD(ctx, { lives, score, shieldCharges = 0 }) {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 12px sans-serif';
@@ -57,10 +64,83 @@ export function drawHUD(ctx, { lives, score }) {
     ctx.fill();
   }
 
+  if (shieldCharges > 0) {
+    ctx.fillStyle = '#7dffb0';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`シールド x${shieldCharges}`, 12, 50);
+  }
+
   ctx.textAlign = 'right';
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillText(`SCORE ${String(score).padStart(6, '0')}`, GAME_WIDTH - 12, 24);
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(`SCORE ${String(score).padStart(6, '0')}`, GAME_WIDTH - 12, 16);
+  ctx.textAlign = 'left';
+}
+
+export function drawPauseButton(ctx) {
+  const r = PAUSE_BUTTON;
+  ctx.fillStyle = 'rgba(19, 26, 43, 0.8)';
+  ctx.strokeStyle = 'rgba(74, 217, 255, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.strokeRect(r.x, r.y, r.w, r.h);
+  ctx.fillStyle = '#4ad9ff';
+  ctx.fillRect(r.x + 8, r.y + 6, 4, 14);
+  ctx.fillRect(r.x + 16, r.y + 6, 4, 14);
+}
+
+function drawSlider(ctx, rect, value, label) {
+  ctx.fillStyle = '#9fb3d9';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, rect.x, rect.y - 10);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  ctx.fillStyle = '#4ad9ff';
+  ctx.fillRect(rect.x, rect.y, rect.w * value, rect.h);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+
+  const knobX = rect.x + rect.w * value;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(knobX, rect.y + rect.h / 2, 6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+export function sliderValueAt(rect, x) {
+  return Math.max(0, Math.min(1, (x - rect.x) / rect.w));
+}
+
+export function drawPauseMenu(ctx, { bgmVolume, seVolume }) {
+  ctx.fillStyle = 'rgba(2, 4, 10, 0.85)';
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4ad9ff';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText('PAUSE', GAME_WIDTH / 2, 220);
+
+  drawSlider(ctx, BGM_SLIDER, bgmVolume, `BGM音量 ${Math.round(bgmVolume * 100)}%`);
+  drawSlider(ctx, SE_SLIDER, seVolume, `SE音量 ${Math.round(seVolume * 100)}%`);
+
+  for (const [rect, label] of [
+    [RESUME_BUTTON, '再開する'],
+    [TITLE_BUTTON, 'タイトルに戻る'],
+  ]) {
+    ctx.fillStyle = '#131a2b';
+    ctx.strokeStyle = '#4ad9ff';
+    ctx.lineWidth = 2;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.fillStyle = '#4ad9ff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2 + 5);
+  }
+
   ctx.textAlign = 'left';
 }
 
@@ -68,7 +148,7 @@ export function drawBossHpBar(ctx, ratio) {
   const barW = GAME_WIDTH - 40;
   const barH = 12;
   const x = 20;
-  const y = 50;
+  const y = 64;
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(x, y, barW, barH);
   ctx.fillStyle = '#ff3d7a';

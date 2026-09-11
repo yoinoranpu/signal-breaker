@@ -125,7 +125,8 @@ export class Boss {
     for (const b of playerBullets.bullets) {
       if (!b.active) continue;
       if (circleHit(this.x, this.y, RADIUS, b.x, b.y, playerBullets.radius)) {
-        b.active = false;
+        if (b.pierceLeft > 0) b.pierceLeft -= 1;
+        else b.active = false;
         this.hp -= b.damage;
         if (this.phase === 1 && this.hp <= this.maxHp / 2 && !this.transitioning) {
           this.transitioning = true;

@@ -13,7 +13,7 @@ export class BulletPool {
     this.bullets = [];
   }
 
-  spawn(x, y, vx, vy, damage = 1) {
+  spawn(x, y, vx, vy, damage = 1, options = {}) {
     let b = this.bullets.find((b) => !b.active);
     if (!b) {
       b = { active: false, x: 0, y: 0, vx: 0, vy: 0, damage: 1 };
@@ -25,11 +25,13 @@ export class BulletPool {
     b.vx = vx;
     b.vy = vy;
     b.damage = damage;
+    b.pierceLeft = options.pierce || 0;
+    b.homing = !!options.homing;
     return b;
   }
 
-  spawnAngle(x, y, angleRad, speed, damage = 1) {
-    return this.spawn(x, y, Math.cos(angleRad) * speed, Math.sin(angleRad) * speed, damage);
+  spawnAngle(x, y, angleRad, speed, damage = 1, options = {}) {
+    return this.spawn(x, y, Math.cos(angleRad) * speed, Math.sin(angleRad) * speed, damage, options);
   }
 
   update(dt) {

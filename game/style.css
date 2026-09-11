@@ -15,5 +15,8 @@ html, body {
   transform: translate(-50%, -50%);
   background: #0a0e18;
   image-rendering: pixelated;
+}
+
+#game.hide-cursor {
   cursor: none;
 }
