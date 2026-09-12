@@ -83,6 +83,7 @@ registerSfx('explosion', 'assets/sounds/se/bomb1.mp3');
 registerSfx('hit', 'assets/sounds/se/blow2.mp3');
 registerSfx('shield', 'assets/sounds/se/shot-struck1.mp3');
 registerSfx('bossTransition', 'assets/sounds/se/base-siren1.mp3');
+registerSfx('bossDefeat', 'assets/sounds/se/big-explosion1.mp3');
 registerSfx('clear', 'assets/sounds/se/trumpet1.mp3');
 registerSfx('gameover', 'assets/sounds/se/curse-melody1.mp3');
 const bgmPlayer = new BgmPlayer();
@@ -398,7 +399,9 @@ function update(dt) {
       state = STATE.CLEAR;
       effects.spawnExplosion(boss.x, boss.y, '#ff8a3d', 30);
       effects.spawnScorePopup(boss.x, boss.y - 20, `+${awarded}`, '#ff8a3d');
-      playSfx('clear', 0.6);
+      playSfx('bossDefeat', 0.7);
+      setTimeout(() => playSfx('explosion', 0.5), 180);
+      setTimeout(() => playSfx('clear', 0.6), 550);
       bgmPlayer.play('clear', 'assets/sounds/bgm/title.mp3', { volume: 0.4 });
       const isNewRecord = updateHighScore(score);
       resultInfo = { rank: getRank(score), isNewRecord, highScore: getHighScore(), graze: grazeGained };

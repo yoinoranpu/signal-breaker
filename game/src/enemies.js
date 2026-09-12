@@ -221,72 +221,52 @@ export class EnemyManager {
   }
 }
 
+function alternatingWave(startTime, endTime, interval) {
+  const wave = [];
+  let toggle = false;
+  for (let t = startTime; t < endTime; t += interval) {
+    wave.push({
+      time: t,
+      spawn: toggle
+        ? () => spawnTypeB(Math.random() < 0.5, randRange(100, 240))
+        : () => spawnTypeA(randRange(60, 420)),
+    });
+    toggle = !toggle;
+  }
+  return wave;
+}
+
 function buildTimeline() {
   const events = [];
 
-  // 0:00-0:20 タイプAを間隔を空けて出現(導入)
-  const aTimesIntro = [1.0, 6.0, 11.5, 17.0];
-  for (const t of aTimesIntro) {
-    events.push({ time: t, spawn: () => spawnTypeA(randRange(80, 400)) });
+  // 0:00-0:20 導入(タイプAのみ、以前より間隔を詰めて密度アップ)
+  for (let t = 1; t <= 19; t += 2) {
+    events.push({ time: t, spawn: () => spawnTypeA(randRange(60, 420)) });
   }
 
-  // 0:20-0:25 タイプA/B混在、密度アップ
+  // 0:20-0:25 タイプB混入
   events.push({ time: 20, spawn: () => spawnTypeA(randRange(80, 400)) });
-  events.push({ time: 21.5, spawn: () => spawnTypeB(true, randRange(120, 220)) });
-  events.push({ time: 23, spawn: () => spawnTypeB(false, randRange(120, 220)) });
+  events.push({ time: 21, spawn: () => spawnTypeB(true, randRange(120, 220)) });
+  events.push({ time: 22.5, spawn: () => spawnTypeA(randRange(80, 400)) });
+  events.push({ time: 24, spawn: () => spawnTypeB(false, randRange(120, 220)) });
 
   // 0:25 タイプC(1体目)
   events.push({ time: 25, spawn: () => spawnTypeC(240) });
 
-  // 0:25-0:55 物量増加
-  const midPhase = [
-    { t: 28, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 31, fn: () => spawnTypeB(true, randRange(100, 240)) },
-    { t: 34, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 37, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 40, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 42.5, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 45, fn: () => spawnTypeB(true, randRange(100, 240)) },
-    { t: 48, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 51, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 53, fn: () => spawnTypeA(randRange(60, 420)) },
-  ];
-  for (const { t, fn } of midPhase) events.push({ time: t, spawn: fn });
+  // 0:25-0:55 物量増加(A/B交互、間隔約1.5秒)
+  events.push(...alternatingWave(27, 54.5, 1.5));
 
   // 0:55 タイプC(2体目)
   events.push({ time: 55, spawn: () => spawnTypeC(240) });
 
-  // 0:55-1:15 物量ラッシュ(道中のクライマックス)
-  const rush = [
-    { t: 57, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 58.5, fn: () => spawnTypeB(true, randRange(100, 240)) },
-    { t: 60, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 61.5, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 63, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 65, fn: () => spawnTypeB(true, randRange(100, 240)) },
-    { t: 67, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 68.5, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 70, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 71.5, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 73, fn: () => spawnTypeB(true, randRange(100, 240)) },
-  ];
-  for (const { t, fn } of rush) events.push({ time: t, spawn: fn });
+  // 0:55-1:15 物量ラッシュ(道中のクライマックス、間隔約1.1秒)
+  events.push(...alternatingWave(57, 74.5, 1.1));
 
   // 1:15 タイプC(3体目)
   events.push({ time: 75, spawn: () => spawnTypeC(240) });
 
-  // 1:15-1:30 仕上げの物量
-  const finale = [
-    { t: 77, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 78.5, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 80, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 81.5, fn: () => spawnTypeB(true, randRange(100, 240)) },
-    { t: 83, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 84.5, fn: () => spawnTypeA(randRange(60, 420)) },
-    { t: 86, fn: () => spawnTypeB(false, randRange(100, 240)) },
-    { t: 87.5, fn: () => spawnTypeA(randRange(60, 420)) },
-  ];
-  for (const { t, fn } of finale) events.push({ time: t, spawn: fn });
+  // 1:15-1:30 仕上げの物量(間隔約1.2秒)
+  events.push(...alternatingWave(77, 89.5, 1.2));
 
   events.sort((a, b) => a.time - b.time);
   return events;
